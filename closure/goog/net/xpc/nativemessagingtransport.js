@@ -21,10 +21,7 @@
 
 goog.provide('goog.net.xpc.NativeMessagingTransport');
 
-goog.require('goog.Timer');
-goog.require('goog.async.Deferred');
 goog.require('goog.events');
-goog.require('goog.events.EventHandler');
 goog.require('goog.net.xpc');
 goog.require('goog.net.xpc.CrossPageChannelRole');
 goog.require('goog.net.xpc.Transport');
@@ -43,14 +40,11 @@ goog.require('goog.net.xpc.Transport');
  *     peer.
  * @param {goog.dom.DomHelper=} opt_domHelper The dom helper to use for
  *     finding the correct window/document.
- * @param {boolean=} opt_oneSidedHandshake If this is true, only the outer
- *     transport sends a SETUP message and expects a SETUP_ACK.  The inner
- *     transport goes connected when it receives the SETUP.
  * @constructor
  * @extends {goog.net.xpc.Transport}
  */
 goog.net.xpc.NativeMessagingTransport = function(channel, peerHostname,
-    opt_domHelper, opt_oneSidedHandshake) {
+    opt_domHelper) {
   goog.base(this, opt_domHelper);
 
   /**
@@ -67,91 +61,8 @@ goog.net.xpc.NativeMessagingTransport = function(channel, peerHostname,
    * @private
    */
   this.peerHostname_ = peerHostname || '*';
-
-  /**
-   * The event handler.
-   * @type {!goog.events.EventHandler}
-   * @private
-   */
-  this.eventHandler_ = new goog.events.EventHandler(this);
-
-  /**
-   * Timer for connection reattempts.
-   * @type {!goog.Timer}
-   * @private
-   */
-  this.maybeAttemptToConnectTimer_ = new goog.Timer(100, this.getWindow());
-
-  /**
-   * Whether one-sided handshakes are enabled.
-   * @type {boolean}
-   * @private
-   */
-  this.oneSidedHandshake_ = !!opt_oneSidedHandshake;
-
-  /**
-   * Fires once we've received our SETUP_ACK message.
-   * @type {!goog.async.Deferred}
-   * @private
-   */
-  this.setupAckReceived_ = new goog.async.Deferred();
-
-  /**
-   * Fires once we've sent our SETUP_ACK message.
-   * @type {!goog.async.Deferred}
-   * @private
-   */
-  this.setupAckSent_ = new goog.async.Deferred();
-
-  /**
-   * Fires once we're marked connected.
-   * @type {!goog.async.Deferred}
-   * @private
-   */
-  this.connected_ = new goog.async.Deferred();
-
-  // We don't want to mark ourselves connected until we have sent whatever
-  // message will cause our counterpart in the other frame to also declare
-  // itself connected, if there is such a message.  Otherwise we risk a user
-  // message being sent in advance of that message, and it being discarded.
-  if (this.oneSidedHandshake_) {
-    if (this.channel_.getRole() == goog.net.xpc.CrossPageChannelRole.INNER) {
-      // One sided handshake, inner frame:
-      // SETUP_ACK must be received.
-      this.connected_.awaitDeferred(this.setupAckReceived_);
-    } else {
-      // One sided handshake, outer frame:
-      // SETUP_ACK must be sent.
-      this.connected_.awaitDeferred(this.setupAckSent_);
-    }
-  } else {
-    // Two sided handshake:
-    // SETUP_ACK has to have been received, and sent.
-    this.connected_.awaitDeferred(this.setupAckReceived_);
-
-    // TODO(dbk): Restore this line.  It is necessary to guarantee that the
-    // peer frame is in the connected state when it receives its first message,
-    // but prevents cases where the peer disappears and reconnects.
-    // this.connected_.awaitDeferred(this.setupAckSent_);
-  }
-  this.connected_.addCallback(this.notifyConnected_, this);
-  this.connected_.callback(true);
-
-  this.eventHandler_.
-      listen(this.maybeAttemptToConnectTimer_, goog.Timer.TICK,
-          this.maybeAttemptToConnect_);
 };
 goog.inherits(goog.net.xpc.NativeMessagingTransport, goog.net.xpc.Transport);
-
-
-/**
- * The id of a timer used briefly during the connection sequence, or null if it
- * is inactive.
- * @type {?number}
- * @private
- */
-goog.net.xpc.NativeMessagingTransport.prototype.connectionNotificationTimerId_ =
-    null;
 
 
 /**
@@ -288,14 +199,9 @@ goog.net.xpc.NativeMessagingTransport.prototype.transportServiceHandler =
   switch (payload) {
     case goog.net.xpc.SETUP:
       this.send(goog.net.xpc.TRANSPORT_SERVICE_, goog.net.xpc.SETUP_ACK_);
-      if (!this.setupAckSent_.hasFired()) {
-        this.setupAckSent_.callback(true);
-      }
       break;
     case goog.net.xpc.SETUP_ACK_:
-      if (!this.setupAckReceived_.hasFired()) {
-        this.setupAckReceived_.callback(true);
-      }
+      this.channel_.notifyConnected_();
       break;
   }
 };
@@ -307,7 +213,7 @@ goog.net.xpc.NativeMessagingTransport.prototype.transportServiceHandler =
 goog.net.xpc.NativeMessagingTransport.prototype.connect = function() {
   goog.net.xpc.NativeMessagingTransport.initialize_(this.getWindow());
   this.initialized_ = true;
-  this.maybeAttemptToConnect_();
+  this.connectWithRetries_();
 };
 
 
@@ -320,20 +226,13 @@ goog.net.xpc.NativeMessagingTransport.prototype.connect = function() {
  * soft-reloads and history navigations.
  * @private
  */
-goog.net.xpc.NativeMessagingTransport.prototype.maybeAttemptToConnect_ =
+goog.net.xpc.NativeMessagingTransport.prototype.connectWithRetries_ =
     function() {
-  // In a one-sided handshake, the outer frame does not send a SETUP message,
-  // but the inner frame does.
-  var outerFrame = this.channel_.getRole() ==
-      goog.net.xpc.CrossPageChannelRole.OUTER;
-  if ((this.oneSidedHandshake_ && outerFrame) ||
-      this.channel_.isConnected() ||
-      this.isDisposed()) {
-    this.maybeAttemptToConnectTimer_.stop();
+  if (this.channel_.isConnected() || this.isDisposed()) {
     return;
   }
-  this.maybeAttemptToConnectTimer_.start();
   this.send(goog.net.xpc.TRANSPORT_SERVICE_, goog.net.xpc.SETUP);
+  this.getWindow().setTimeout(goog.bind(this.connectWithRetries_, this), 100);
 };
 
 
@@ -364,35 +263,6 @@ goog.net.xpc.NativeMessagingTransport.prototype.send = function(service,
 };
 
 
-/**
- * Notify the channel that this transport is connected, possibly at a delay.
- * @private
- */
-goog.net.xpc.NativeMessagingTransport.prototype.notifyConnected_ = function() {
-  // TODO(dbk): Remove this timeout.  This is here strictly as a temporary
-  // measure to prevent premature message delivery by the outer frame to the,
-  // inner frame, and should be removed when my TODO in the constructor is
-  // resolved.
-  if (this.channel_.getRole() == goog.net.xpc.CrossPageChannelRole.OUTER) {
-    this.connectionNotificationTimerId_ = goog.Timer.callOnce(
-        this.doNotifyConnected_, 100, this);
-  } else {
-    this.doNotifyConnected_();
-  }
-};
-
-
-/**
- * Notify the channel that this transport is connected.
- * @private
- */
-goog.net.xpc.NativeMessagingTransport.prototype.doNotifyConnected_ =
-    function() {
-  this.connectionNotificationTimerId_ = null;
-  this.channel_.notifyConnected();
-};
-
-
 /** @override */
 goog.net.xpc.NativeMessagingTransport.prototype.disposeInternal = function() {
   goog.base(this, 'disposeInternal');
@@ -410,24 +280,6 @@ goog.net.xpc.NativeMessagingTransport.prototype.disposeInternal = function() {
           goog.net.xpc.NativeMessagingTransport);
     }
   }
-
-  if (this.connectionNotificationTimerId_) {
-    goog.Timer.clear(this.connectionNotificationTimerId_);
-  }
-
-  goog.dispose(this.eventHandler_);
-  delete this.eventHandler_;
-
-  goog.dispose(this.maybeAttemptToConnectTimer_);
-  delete this.maybeAttemptToConnectTimer_;
-
-  this.setupAckReceived_.cancel();
-  delete this.setupAckReceived_;
-  this.setupAckSent_.cancel();
-  delete this.setupAckSent_;
-  this.connected_.cancel();
-  delete this.connected_;
-
   // Cleaning up this.send as it is an instance method, created in
   // goog.net.xpc.NativeMessagingTransport.prototype.send and has a closure over
   // this.channel_.peerWindowObject_.

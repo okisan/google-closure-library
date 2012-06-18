@@ -88,7 +88,7 @@ goog.inherits(goog.net.XhrIo, goog.events.EventTarget);
 /**
  * Response types that may be requested for XMLHttpRequests.
  * @enum {string}
- * @see http://www.w3.org/TR/XMLHttpRequest/#the-responsetype-attribute
+ * @see http://dev.w3.org/2006/webapi/XMLHttpRequest-2/#the-responsetype-attribute
  */
 goog.net.XhrIo.ResponseType = {
   DEFAULT: '',
@@ -120,7 +120,7 @@ goog.net.XhrIo.CONTENT_TYPE_HEADER = 'Content-Type';
  * The pattern matching the 'http' and 'https' URI schemes
  * @type {!RegExp}
  */
-goog.net.XhrIo.HTTP_SCHEME_PATTERN = /^https?$/i;
+goog.net.XhrIo.HTTP_SCHEME_PATTERN = /^https?:?$/i;
 
 
 /**
@@ -155,9 +155,10 @@ goog.net.XhrIo.sendInstances_ = [];
  *     request.
  * @param {number=} opt_timeoutInterval Number of milliseconds after which an
  *     incomplete request will be aborted; 0 means no timeout is set.
+ * @param {boolean=} opt_sync send synchronious request
  */
 goog.net.XhrIo.send = function(url, opt_callback, opt_method, opt_content,
-                               opt_headers, opt_timeoutInterval) {
+                               opt_headers, opt_timeoutInterval, opt_sync) {
   var x = new goog.net.XhrIo();
   goog.net.XhrIo.sendInstances_.push(x);
   if (opt_callback) {
@@ -169,7 +170,7 @@ goog.net.XhrIo.send = function(url, opt_callback, opt_method, opt_content,
   if (opt_timeoutInterval) {
     x.setTimeoutInterval(opt_timeoutInterval);
   }
-  x.send(url, opt_method, opt_content, opt_headers);
+  x.send(url, opt_method, opt_content, opt_headers, opt_sync);
 };
 
 
@@ -356,7 +357,7 @@ goog.net.XhrIo.prototype.responseType_ = goog.net.XhrIo.ResponseType.DEFAULT;
  * more recent browsers that support this part of the HTTP Access Control
  * standard.
  *
- * @see http://www.w3.org/TR/XMLHttpRequest/#the-withcredentials-attribute
+ * @see http://dev.w3.org/2006/webapi/XMLHttpRequest-2/#withcredentials
  *
  * @type {boolean}
  * @private
@@ -438,14 +439,16 @@ goog.net.XhrIo.prototype.getWithCredentials = function() {
  *     if the underlying HTTP request object is a Gears HTTP request.
  * @param {Object|goog.structs.Map=} opt_headers Map of headers to add to the
  *     request.
+ * @param {boolean=} opt_sync send synchronious request
  */
 goog.net.XhrIo.prototype.send = function(url, opt_method, opt_content,
-                                         opt_headers) {
+                                         opt_headers, opt_sync) {
   if (this.xhr_) {
     throw Error('[goog.net.XhrIo] Object is active with another request');
   }
 
   var method = opt_method ? opt_method.toUpperCase() : 'GET';
+  opt_sync = !!opt_sync;
 
   this.lastUri_ = url;
   this.lastError_ = '';
@@ -463,14 +466,14 @@ goog.net.XhrIo.prototype.send = function(url, opt_method, opt_content,
   this.xhr_.onreadystatechange = goog.bind(this.onReadyStateChange_, this);
 
   /**
-   * Try to open the XMLHttpRequest (always async), if an error occurs here it
+   * Try to open the XMLHttpRequest, if an error occurs here it
    * is generally permission denied
    * @preserveTry
    */
   try {
     this.logger_.fine(this.formatMsg_('Opening Xhr'));
     this.inOpen_ = true;
-    this.xhr_.open(method, url, true);  // Always async!
+    this.xhr_.open(method, url, !opt_sync);  // Always async! ???
     this.inOpen_ = false;
   } catch (err) {
     this.logger_.fine(this.formatMsg_('Error opening Xhr: ' + err.message));
@@ -729,21 +732,18 @@ goog.net.XhrIo.prototype.onReadyStateChangeHelper_ = function() {
 
       this.active_ = false;
 
-      try {
-        // Call the specific callbacks for success or failure. Only call the
-        // success if the status is 200 (HTTP_OK) or 304 (HTTP_CACHED)
-        if (this.isSuccess()) {
-          this.dispatchEvent(goog.net.EventType.COMPLETE);
-          this.dispatchEvent(goog.net.EventType.SUCCESS);
-        } else {
-          this.lastErrorCode_ = goog.net.ErrorCode.HTTP_ERROR;
-          this.lastError_ =
-              this.getStatusText() + ' [' + this.getStatus() + ']';
-          this.dispatchErrors_();
-        }
-      } finally {
-        this.cleanUpXhr_();
+      // Call the specific callbacks for success or failure. Only call the
+      // success if the status is 200 (HTTP_OK) or 304 (HTTP_CACHED)
+      if (this.isSuccess()) {
+        this.dispatchEvent(goog.net.EventType.COMPLETE);
+        this.dispatchEvent(goog.net.EventType.SUCCESS);
+      } else {
+        this.lastErrorCode_ = goog.net.ErrorCode.HTTP_ERROR;
+        this.lastError_ = this.getStatusText() + ' [' + this.getStatus() + ']';
+        this.dispatchErrors_();
       }
+
+      this.cleanUpXhr_();
     }
   }
 };
@@ -827,8 +827,22 @@ goog.net.XhrIo.prototype.isSuccess = function() {
  * @private
  */
 goog.net.XhrIo.prototype.isLastUriEffectiveSchemeHttp_ = function() {
-  var scheme = goog.uri.utils.getEffectiveScheme(String(this.lastUri_));
-  return goog.net.XhrIo.HTTP_SCHEME_PATTERN.test(scheme);
+  var lastUriScheme = goog.isString(this.lastUri_) ?
+      goog.uri.utils.getScheme(this.lastUri_) :
+      (/** @type {!goog.Uri} */ this.lastUri_).getScheme();
+  // if it's an absolute URI, we're done.
+  if (lastUriScheme) {
+    return goog.net.XhrIo.HTTP_SCHEME_PATTERN.test(lastUriScheme);
+  }
+
+  // if it's a relative URI, it inherits the scheme of the page.
+  if (self.location) {
+    return goog.net.XhrIo.HTTP_SCHEME_PATTERN.test(self.location.protocol);
+  } else {
+    // This case can occur from a web worker in Firefox 3.5 . All other browsers
+    // with web workers support self.location from the worker.
+    return true;
+  }
 };
 
 
@@ -964,7 +978,7 @@ goog.net.XhrIo.prototype.getResponseJson = function(opt_xssiPrefix) {
  * try to emulate it.
  *
  * Emulating the response means following the rules laid out at
- * http://www.w3.org/TR/XMLHttpRequest/#the-response-attribute
+ * http://dev.w3.org/2006/webapi/XMLHttpRequest-2/#the-response-attribute.
  *
  * On browsers with no support for this (Chrome < 10, Firefox < 4, etc), only
  * response types of DEFAULT or TEXT may be used, and the response returned will

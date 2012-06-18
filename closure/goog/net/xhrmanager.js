@@ -148,6 +148,17 @@ goog.net.XhrManager.prototype.getOutstandingCount = function() {
 
 
 /**
+ *
+ * @param {string} id
+ * @return {boolean}
+ */
+goog.net.XhrManager.prototype.hasSent = function(id) {
+  return !!this.requests_.get(id);
+};
+
+
+
+/**
  * Registers the given request to be sent. Throws an error if a request
  * already exists with the given ID.
  * NOTE: It is not sent immediately. It is queued and will be sent when an
@@ -164,6 +175,7 @@ goog.net.XhrManager.prototype.getOutstandingCount = function() {
  *     complete. The only param is the event object from the COMPLETE event.
  * @param {number=} opt_maxRetries The maximum number of times the request
  *     should be retried.
+ * @param {boolean=} opt_withCredentials
  * @return {goog.net.XhrManager.Request} The queued request object.
  */
 goog.net.XhrManager.prototype.send = function(
@@ -174,7 +186,8 @@ goog.net.XhrManager.prototype.send = function(
     opt_headers,
     opt_priority,
     opt_callback,
-    opt_maxRetries) {
+    opt_maxRetries,
+    opt_withCredentials) {
   var requests = this.requests_;
   // Check if there is already a request with the given id.
   if (requests.get(id)) {
@@ -189,7 +202,8 @@ goog.net.XhrManager.prototype.send = function(
       opt_content,
       opt_headers,
       opt_callback,
-      goog.isDef(opt_maxRetries) ? opt_maxRetries : this.maxRetries_);
+      goog.isDef(opt_maxRetries) ? opt_maxRetries : this.maxRetries_,
+      opt_withCredentials);
   this.requests_.set(id, request);
 
   // Setup the callback for the pool.
@@ -250,6 +264,9 @@ goog.net.XhrManager.prototype.handleAvailableXhr_ = function(id, xhrIo) {
 
     // Add a reference to the XhrIo object to the request.
     request.xhrIo = request.xhrLite = xhrIo;
+
+    /** ydn Hack */
+	  request.xhrIo.setWithCredentials(request.withCredentials_);
 
     // Notify the listeners.
     this.dispatchEvent(new goog.net.XhrManager.Event(
@@ -534,13 +551,17 @@ goog.net.XhrManager.Event.prototype.disposeInternal = function() {
  *     complete. NOTE: Only 1 callback supported across all events.
  * @param {number=} opt_maxRetries The maximum number of times the request
  *     should be retried (Default: 1).
+ * @param {boolean=} opt_withCredentials
  *
  * @constructor
  * @extends {goog.Disposable}
  */
 goog.net.XhrManager.Request = function(url, xhrEventCallback, opt_method,
-    opt_content, opt_headers, opt_callback, opt_maxRetries) {
+    opt_content, opt_headers, opt_callback, opt_maxRetries, opt_withCredentials) {
   goog.Disposable.call(this);
+
+  /** ydn Hack */
+  this.withCredentials_ = !! opt_withCredentials;
 
   /**
    * Uri to make the request too.

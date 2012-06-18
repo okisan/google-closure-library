@@ -51,7 +51,6 @@ goog.net.xpc.IframePollingTransport = function(channel, opt_domHelper) {
   /**
    * The channel this transport belongs to.
    * @type {goog.net.xpc.CrossPageChannel}
-   * @private
    */
   this.channel_ = channel;
 
@@ -80,22 +79,12 @@ goog.inherits(goog.net.xpc.IframePollingTransport, goog.net.xpc.Transport);
 
 
 /**
- * The number of times the inner frame will check for evidence of the outer
- * frame before it tries its reconnection sequence.  These occur at 100ms
- * intervals, making this an effective max waiting period of 500ms.
- * @type {number}
- * @private
- */
-goog.net.xpc.IframePollingTransport.prototype.pollsBeforeReconnect_ = 5;
-
-
-/**
  * The transport type.
  * @type {number}
  * @protected
  */
 goog.net.xpc.IframePollingTransport.prototype.transportType =
-    goog.net.xpc.TransportTypes.IFRAME_POLLING;
+  goog.net.xpc.TransportTypes.IFRAME_POLLING;
 
 
 /**
@@ -120,14 +109,6 @@ goog.net.xpc.IframePollingTransport.prototype.waitForAck_ = false;
  * @private
  */
 goog.net.xpc.IframePollingTransport.prototype.initialized_ = false;
-
-
-/**
- * Reconnection iframe created by inner peer.
- * @type {Element}
- * @private
- */
-goog.net.xpc.IframePollingTransport.prototype.reconnectFrame_ = null;
 
 
 /**
@@ -229,25 +210,16 @@ goog.net.xpc.IframePollingTransport.prototype.constructSenderFrame_ =
  * of bfcached iframes.
  * @private
  */
-goog.net.xpc.IframePollingTransport.prototype.maybeInnerPeerReconnect_ =
-    function() {
-  // Reconnection has been found to not function on some browsers (eg IE7), so
-  // it's important that the mechanism only be triggered as a last resort.  As
-  // such, we poll a number of times to find the outer iframe before triggering
-  // it.
-  if (this.reconnectFrame_ || this.pollsBeforeReconnect_-- > 0) {
-    return;
-  }
-
-  goog.net.xpc.logger.finest('Inner peer reconnect triggered.');
+goog.net.xpc.IframePollingTransport.prototype.innerPeerReconnect_ = function() {
+  goog.net.xpc.logger.finest('innerPeerReconnect called');
   this.channel_.name = goog.net.xpc.getRandomString(10);
   goog.net.xpc.logger.finest('switching channels: ' + this.channel_.name);
   this.deconstructSenderFrames_();
   this.initialized_ = false;
   // Communicate new channel name to outer peer.
   this.reconnectFrame_ = this.constructSenderFrame_(
-      goog.net.xpc.IframePollingTransport.IFRAME_PREFIX +
-          '_reconnect_' + this.channel_.name);
+    goog.net.xpc.IframePollingTransport.IFRAME_PREFIX +
+      '_reconnect_' + this.channel_.name);
 };
 
 
@@ -323,13 +295,13 @@ goog.net.xpc.IframePollingTransport.prototype.checkForeignFramesReady_ =
         this.isRcvFrameReady_(this.getAckFrameName_()))) {
     goog.net.xpc.logger.finest('foreign frames not (yet) present');
 
-    if (this.channel_.getRole() == goog.net.xpc.CrossPageChannelRole.INNER) {
-      // The outer peer might need a short time to get its frames ready, as
-      // CrossPageChannel prevents them from getting created until the inner
-      // peer's frame has thrown its loaded event.  This method is a noop for
-      // the first few times it's called, and then allows the reconnection
-      // sequence to begin.
-      this.maybeInnerPeerReconnect_();
+    if (this.channel_.getRole() == goog.net.xpc.CrossPageChannelRole.INNER &&
+        !this.reconnectFrame_) {
+      // The inner peer should always have its receiving frames ready.
+      // It is safe to assume the channel name has fallen out of sync
+      // (which happens with bfcached frames). Create "reconnect" frames,
+      // which the outer peer will find, and use to resync the channel names.
+      this.innerPeerReconnect_();
     } else if (this.channel_.getRole() ==
                goog.net.xpc.CrossPageChannelRole.OUTER) {
       // The inner peer is either not loaded yet, or the receiving
@@ -425,7 +397,7 @@ goog.net.xpc.IframePollingTransport.prototype.checkLocalFramesPresent_ =
  */
 goog.net.xpc.IframePollingTransport.prototype.checkIfConnected_ = function() {
   if (this.sentConnectionSetupAck_ && this.rcvdConnectionSetupAck_) {
-    this.channel_.notifyConnected();
+    this.channel_.notifyConnected_();
 
     if (this.deliveryQueue_) {
       goog.net.xpc.logger.fine('delivering queued messages ' +

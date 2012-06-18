@@ -148,34 +148,7 @@ goog.net.xpc.CfgFields = {
    * (if specified). Used for security sensitive applications that make
    * use of NativeMessagingTransport (i.e. most applications).
    */
-  PEER_HOSTNAME: 'ph',
-  /**
-   * Usually both frames using a connection initially send a SETUP message to
-   * each other, and each responds with a SETUP_ACK.  A frame marks itself
-   * connected when it receives that SETUP_ACK.  If this parameter is true
-   * however, the channel it is passed to will not send a SETUP, but rather will
-   * wait for one from its peer and mark itself connected when that arrives.
-   * Peer iframes created using such a channel will send SETUP however, and will
-   * wait for SETUP_ACK before marking themselves connected.  The goal is to
-   * cope with a situation where the availability of the URL for the peer frame
-   * cannot be relied on, eg when the application is offline.  Without this
-   * setting, the primary frame will attempt to send its SETUP message every
-   * 100ms, forever.  This floods the javascript console with uncatchable
-   * security warnings, and fruitlessly burns CPU.  There is one scenario this
-   * mode will not support, and that is reconnection by the outer frame, ie the
-   * creation of a new channel object to connect to a peer iframe which was
-   * already communicating with a previous channel object of the same name.  If
-   * that behavior is needed, this mode should not be used.  Reconnection by
-   * inner frames is supported in this mode however.
-   */
-  ONE_SIDED_HANDSHAKE: 'osh',
-  /**
-   * The frame role (inner or outer). Used to explicitly indicate the role for
-   * each peer whenever the role cannot be reliably determined (e.g. the two
-   * peer windows are not parent/child frames). If unspecified, the role will
-   * be dynamically determined, assuming a parent/child frame setup.
-   */
-  ROLE: 'role'
+  PEER_HOSTNAME: 'ph'
 };
 
 
@@ -205,21 +178,18 @@ goog.net.xpc.ChannelStates = {
 /**
  * The name of the transport service (used for internal signalling).
  * @type {string}
- * @private
  */
 goog.net.xpc.TRANSPORT_SERVICE_ = 'tp';
 
 
 /**
  * Transport signaling message: setup.
- * @protected
  */
 goog.net.xpc.SETUP = 'SETUP';
 
 
 /**
  * Transport signaling message: setup acknowledgement.
- * @private
  */
 goog.net.xpc.SETUP_ACK_ = 'SETUP_ACK';
 
@@ -227,7 +197,6 @@ goog.net.xpc.SETUP_ACK_ = 'SETUP_ACK';
 /**
  * Object holding active channels.
  * @type {Object}
- * @private
  */
 goog.net.xpc.channels_ = {};
 

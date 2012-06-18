@@ -383,7 +383,7 @@ goog.net.xpc.NixTransport.prototype.attemptInnerSetup_ = function() {
       this.localSetupCompleted_ = true;
 
       // Notify channel that the transport is ready.
-      this.channel_.notifyConnected();
+      this.channel_.notifyConnected_();
     }
   }
   catch (e) {
@@ -426,7 +426,7 @@ goog.net.xpc.NixTransport.prototype.createChannel_ = function(channel) {
 
    // Indicate to the CrossPageChannel that the channel is setup
    // and ready to use.
-   this.channel_.notifyConnected();
+   this.channel_.notifyConnected_();
 };
 
 
@@ -440,10 +440,11 @@ goog.net.xpc.NixTransport.prototype.createChannel_ = function(channel) {
  */
 goog.net.xpc.NixTransport.prototype.handleMessage_ =
     function(serviceName, payload) {
-  /** @this {goog.net.xpc.NixTransport} */
-  var deliveryHandler = function() {
-    this.channel_.safeDeliver(serviceName, payload);
-  };
+
+  function deliveryHandler() {
+    this.channel_.deliver_(serviceName, payload);
+  }
+
   this.getWindow().setTimeout(goog.bind(deliveryHandler, this), 1);
 };
 
