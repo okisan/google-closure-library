@@ -188,7 +188,7 @@ goog.addDependency('events/browserfeature.js', ['goog.events.BrowserFeature'], [
 goog.addDependency('events/event.js', ['goog.events.Event'], ['goog.Disposable']);
 goog.addDependency('events/eventhandler.js', ['goog.events.EventHandler'], ['goog.Disposable', 'goog.array', 'goog.events', 'goog.events.EventWrapper']);
 goog.addDependency('events/events.js', ['goog.events'], ['goog.array', 'goog.debug.entryPointRegistry', 'goog.debug.errorHandlerWeakDep', 'goog.events.BrowserEvent', 'goog.events.BrowserFeature', 'goog.events.Event', 'goog.events.EventWrapper', 'goog.events.Listener', 'goog.object', 'goog.userAgent']);
-goog.addDependency('events/eventtarget.js', ['goog.events.EventTarget'], ['goog.Disposable', 'goog.debug.Logger', 'goog.events']);
+goog.addDependency('events/eventtarget.js', ['goog.events.EventTarget'], ['goog.Disposable', 'goog.events']);
 goog.addDependency('events/eventtype.js', ['goog.events.EventType'], ['goog.userAgent']);
 goog.addDependency('events/eventwrapper.js', ['goog.events.EventWrapper'], []);
 goog.addDependency('events/filedrophandler.js', ['goog.events.FileDropHandler', 'goog.events.FileDropHandler.EventType'], ['goog.array', 'goog.debug.Logger', 'goog.dom', 'goog.events', 'goog.events.BrowserEvent', 'goog.events.EventHandler', 'goog.events.EventTarget', 'goog.events.EventType']);
@@ -311,8 +311,8 @@ goog.addDependency('json/json.js', ['goog.json', 'goog.json.Serializer'], []);
 goog.addDependency('labs/async/chain.js', ['goog.labs.async.chain'], ['goog.labs.async.Result', 'goog.labs.async.SimpleResult', 'goog.labs.async.wait']);
 goog.addDependency('labs/async/combine.js', ['goog.labs.async.combine'], ['goog.array', 'goog.labs.async.Result', 'goog.labs.async.SimpleResult', 'goog.labs.async.wait']);
 goog.addDependency('labs/async/deferredadaptor.js', ['goog.labs.async.DeferredAdaptor'], ['goog.async.Deferred', 'goog.labs.async.Result', 'goog.labs.async.wait']);
-goog.addDependency('labs/async/result/result.js', ['goog.labs.async.Result'], ['goog.debug.Error']);
-goog.addDependency('labs/async/result/simpleresult.js', ['goog.labs.async.SimpleResult', 'goog.labs.async.SimpleResult.StateError'], ['goog.debug.Error', 'goog.labs.async.Result']);
+goog.addDependency('labs/async/result.js', ['goog.labs.async.Result'], ['goog.debug.Error']);
+goog.addDependency('labs/async/simpleresult.js', ['goog.labs.async.SimpleResult', 'goog.labs.async.SimpleResult.StateError'], ['goog.debug.Error', 'goog.labs.async.Result']);
 goog.addDependency('labs/async/transform.js', ['goog.labs.async.transform'], ['goog.labs.async.Result', 'goog.labs.async.SimpleResult', 'goog.labs.async.wait']);
 goog.addDependency('labs/async/wait.js', ['goog.labs.async.wait'], ['goog.array', 'goog.labs.async.Result']);
 goog.addDependency('labs/net/image.js', ['goog.labs.net.image'], ['goog.events.EventHandler', 'goog.labs.async.SimpleResult', 'goog.net.EventType']);
@@ -521,7 +521,7 @@ goog.addDependency('testing/editor/dom.js', ['goog.testing.editor.dom'], ['goog.
 goog.addDependency('testing/editor/fieldmock.js', ['goog.testing.editor.FieldMock'], ['goog.dom', 'goog.dom.Range', 'goog.editor.Field', 'goog.testing.LooseMock']);
 goog.addDependency('testing/editor/testhelper.js', ['goog.testing.editor.TestHelper'], ['goog.Disposable', 'goog.dom', 'goog.dom.Range', 'goog.editor.BrowserFeature', 'goog.editor.node', 'goog.testing.dom']);
 goog.addDependency('testing/events/eventobserver.js', ['goog.testing.events.EventObserver'], ['goog.array']);
-goog.addDependency('testing/events/events.js', ['goog.testing.events', 'goog.testing.events.Event'], ['goog.events', 'goog.events.BrowserEvent', 'goog.events.BrowserEvent.MouseButton', 'goog.events.BrowserFeature', 'goog.events.Event', 'goog.events.EventType', 'goog.events.KeyCodes', 'goog.object', 'goog.style', 'goog.userAgent']);
+goog.addDependency('testing/events/events.js', ['goog.testing.events', 'goog.testing.events.Event'], ['goog.events', 'goog.events.BrowserEvent', 'goog.events.BrowserEvent.MouseButton', 'goog.events.BrowserFeature', 'goog.events.EventType', 'goog.events.KeyCodes', 'goog.object', 'goog.style', 'goog.userAgent']);
 goog.addDependency('testing/events/matchers.js', ['goog.testing.events.EventMatcher'], ['goog.events.Event', 'goog.testing.mockmatchers.ArgumentMatcher']);
 goog.addDependency('testing/events/onlinehandler.js', ['goog.testing.events.OnlineHandler'], ['goog.events.EventTarget', 'goog.events.OnlineHandler.EventType']);
 goog.addDependency('testing/expectedfailures.js', ['goog.testing.ExpectedFailures'], ['goog.debug.DivConsole', 'goog.debug.Logger', 'goog.dom', 'goog.dom.TagName', 'goog.events', 'goog.events.EventType', 'goog.style', 'goog.testing.JsUnitException', 'goog.testing.TestCase', 'goog.testing.asserts']);
@@ -693,7 +693,7 @@ goog.addDependency('ui/idletimer.js', ['goog.ui.IdleTimer'], ['goog.Timer', 'goo
 goog.addDependency('ui/iframemask.js', ['goog.ui.IframeMask'], ['goog.Disposable', 'goog.Timer', 'goog.dom', 'goog.dom.DomHelper', 'goog.dom.iframe', 'goog.events.EventHandler', 'goog.events.EventTarget', 'goog.style']);
 goog.addDependency('ui/imagelessbuttonrenderer.js', ['goog.ui.ImagelessButtonRenderer'], ['goog.dom.classes', 'goog.ui.Button', 'goog.ui.ControlContent', 'goog.ui.CustomButtonRenderer', 'goog.ui.INLINE_BLOCK_CLASSNAME', 'goog.ui.registry']);
 goog.addDependency('ui/imagelessmenubuttonrenderer.js', ['goog.ui.ImagelessMenuButtonRenderer'], ['goog.dom', 'goog.dom.TagName', 'goog.dom.classes', 'goog.ui.ControlContent', 'goog.ui.INLINE_BLOCK_CLASSNAME', 'goog.ui.MenuButton', 'goog.ui.MenuButtonRenderer', 'goog.ui.registry']);
-goog.addDependency('ui/inputdatepicker.js', ['goog.ui.InputDatePicker'], ['goog.date.DateTime', 'goog.dom', 'goog.i18n.DateTimeParse', 'goog.string', 'goog.ui.Component', 'goog.ui.PopupDatePicker']);
+goog.addDependency('ui/inputdatepicker.js', ['goog.ui.InputDatePicker'], ['goog.date.DateTime', 'goog.dom', 'goog.string', 'goog.ui.Component', 'goog.ui.DatePicker', 'goog.ui.PopupBase', 'goog.ui.PopupDatePicker']);
 goog.addDependency('ui/itemevent.js', ['goog.ui.ItemEvent'], ['goog.events.Event']);
 goog.addDependency('ui/keyboardshortcuthandler.js', ['goog.ui.KeyboardShortcutEvent', 'goog.ui.KeyboardShortcutHandler', 'goog.ui.KeyboardShortcutHandler.EventType'], ['goog.Timer', 'goog.events', 'goog.events.Event', 'goog.events.EventTarget', 'goog.events.EventType', 'goog.events.KeyCodes', 'goog.events.KeyNames', 'goog.object']);
 goog.addDependency('ui/labelinput.js', ['goog.ui.LabelInput'], ['goog.Timer', 'goog.dom', 'goog.dom.a11y', 'goog.dom.a11y.State', 'goog.dom.classes', 'goog.events.EventHandler', 'goog.events.EventType', 'goog.ui.Component', 'goog.userAgent']);
