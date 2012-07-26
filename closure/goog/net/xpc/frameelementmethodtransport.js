@@ -49,7 +49,6 @@ goog.net.xpc.FrameElementMethodTransport = function(channel, opt_domHelper) {
   /**
    * The channel this transport belongs to.
    * @type {goog.net.xpc.CrossPageChannel}
-   * @private
    */
   this.channel_ = channel;
 

@@ -105,7 +105,7 @@ goog.Timer.prototype.enabled = false;
  * window object.
  * @type {Object}
  */
-goog.Timer.defaultTimerObject = goog.global['window'];
+goog.Timer.defaultTimerObject = goog.global['window'] || goog.global['self'];
 
 
 /**
