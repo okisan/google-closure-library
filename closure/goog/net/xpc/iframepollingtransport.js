@@ -57,7 +57,6 @@ goog.net.xpc.IframePollingTransport = function(channel, opt_domHelper) {
   /**
    * The URI used to send messages.
    * @type {string}
-   * @private
    */
   this.sendUri_ = this.channel_.cfg_[goog.net.xpc.CfgFields.PEER_POLL_URI];
 
