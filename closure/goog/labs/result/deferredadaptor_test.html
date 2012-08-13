@@ -7,12 +7,13 @@ Use of this source code is governed by the Apache License, Version 2.0.
 See the COPYING file for details.
 -->
 <head>
-<title>Closure Unit Tests - goog.labs.async.DeferredAdaptor</title>
+<title>Closure Unit Tests - goog.labs.result.DeferredAdaptor</title>
 <script src="../../base.js"></script>
 <script>
 
-goog.require('goog.labs.async.DeferredAdaptor');
-goog.require('goog.labs.async.SimpleResult');
+goog.require('goog.labs.result');
+goog.require('goog.labs.result.DeferredAdaptor');
+goog.require('goog.labs.result.SimpleResult');
 goog.require('goog.testing.jsunit');
 goog.require('goog.testing.recordFunction');
 
@@ -24,8 +25,8 @@ goog.require('goog.testing.recordFunction');
 var result, deferred, record;
 
 function setUp() {
-  result = new goog.labs.async.SimpleResult();
-  deferred = new goog.labs.async.DeferredAdaptor(result);
+  result = new goog.labs.result.SimpleResult();
+  deferred = new goog.labs.result.DeferredAdaptor(result);
   record = new goog.testing.recordFunction();
 }
 
@@ -47,6 +48,18 @@ function testResultErrorResolution() {
   assertEquals(1, record.getCallCount());
   var call = record.popLastCall();
   assertEquals(2, call.getArgument(0));
+}
+
+function testResultCancelResolution() {
+  deferred.addCallback(record);
+  var cancelCallback = new goog.testing.recordFunction();
+  deferred.addErrback(cancelCallback);
+  result.cancel();
+  assertEquals(0, record.getCallCount());
+  assertEquals(1, cancelCallback.getCallCount());
+  var call = cancelCallback.popLastCall();
+  assertTrue(call.getArgument(0) instanceof
+             goog.async.Deferred.CancelledError);
 }
 
 function testAddCallbackOnResolvedResult() {

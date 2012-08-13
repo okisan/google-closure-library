@@ -139,7 +139,9 @@ goog.net.XhrManager.prototype.setTimeoutInterval = function(ms) {
 
 
 /**
- * Returns the number of reuqests either in flight, or waiting to be sent.
+ * Returns the number of requests either in flight, or waiting to be sent.
+ * The count will include the current request if used within a COMPLETE event
+ * handler or callback.
  * @return {number} The number of requests in flight or pending send.
  */
 goog.net.XhrManager.prototype.getOutstandingCount = function() {
@@ -148,14 +150,14 @@ goog.net.XhrManager.prototype.getOutstandingCount = function() {
 
 
 /**
- *
- * @param {string} id
- * @return {boolean}
+ * Returns an array of request ids that are either in flight, or waiting to
+ * be sent. The id of the current request will be included if used within a
+ * COMPLETE event handler or callback.
+ * @return {!Array.<string>} Request ids in flight or pending send.
  */
-goog.net.XhrManager.prototype.hasSent = function(id) {
-  return !!this.requests_.get(id);
+goog.net.XhrManager.prototype.getOutstandingRequestIds = function() {
+  return this.requests_.getKeys();
 };
-
 
 
 /**
