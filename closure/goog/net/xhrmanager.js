@@ -178,12 +178,9 @@ goog.net.XhrManager.prototype.getOutstandingRequestIds = function() {
  *     complete. The only param is the event object from the COMPLETE event.
  * @param {number=} opt_maxRetries The maximum number of times the request
  *     should be retried.
-<<<<<<< HEAD
- * @param {boolean=} opt_withCredentials
-=======
  * @param {goog.net.XhrIo.ResponseType=} opt_responseType The response type of
  *     this request; defaults to goog.net.XhrIo.ResponseType.DEFAULT.
->>>>>>> 7d4192b332c67724c1bbbedd964114eec56d9a7d
+ * @param {boolean=} opt_withCredentials
  * @return {goog.net.XhrManager.Request} The queued request object.
  */
 goog.net.XhrManager.prototype.send = function(
@@ -195,8 +192,8 @@ goog.net.XhrManager.prototype.send = function(
     opt_priority,
     opt_callback,
     opt_maxRetries,
+    opt_responseType,
     opt_withCredentials) {
-    opt_responseType) {
   var requests = this.requests_;
   // Check if there is already a request with the given id.
   if (requests.get(id)) {
@@ -212,8 +209,8 @@ goog.net.XhrManager.prototype.send = function(
       opt_headers,
       opt_callback,
       goog.isDef(opt_maxRetries) ? opt_maxRetries : this.maxRetries_,
+      opt_responseType,
       opt_withCredentials);
-      opt_responseType);
   this.requests_.set(id, request);
 
   // Setup the callback for the pool.
