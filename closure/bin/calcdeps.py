@@ -455,7 +455,7 @@ def Compile(compiler_jar_path, source_paths, out, flags=None):
     source_paths: Source paths to build, in order.
     flags: A list of additional flags to pass on to Closure compiler.
   """
-  args = ['java', '-jar', compiler_jar_path]
+  args = ['java', '-jar', '-d32', compiler_jar_path]
   for path in source_paths:
     args += ['--js', path]
 
