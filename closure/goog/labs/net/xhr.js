@@ -31,6 +31,7 @@ goog.require('goog.json');
 goog.require('goog.net.HttpStatus');
 goog.require('goog.net.XmlHttp');
 goog.require('goog.result');
+goog.require('goog.result.SimpleResult');
 goog.require('goog.string');
 goog.require('goog.uri.utils');
 
@@ -235,6 +236,8 @@ _.makeRequest = function(
   xhr.onreadystatechange = function() {
     if (xhr.readyState == goog.net.XmlHttp.ReadyState.COMPLETE) {
       window.clearTimeout(timer);
+      // Note: When developing locally, XHRs to file:// schemes return a status
+      // code of 0. We mark that case as a success too.
       if (HttpStatus.isSuccess(xhr.status) ||
           xhr.status === 0 && !_.isEffectiveSchemeHttp_(url)) {
         callback(xhr);
@@ -290,6 +293,8 @@ _.makeRequest = function(
   } catch (e) {
     // XMLHttpRequest.send is known to throw on some versions of FF, for example
     // if a cross-origin request is disallowed.
+    xhr.onreadystatechange = goog.nullFunction;
+    window.clearTimeout(timer);
     errback(new _.Error('Error sending XHR: ' + e.message, url, xhr));
   }
 

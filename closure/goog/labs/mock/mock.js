@@ -21,6 +21,8 @@
  * object (spying) and returning specific values for some or all the inputs to
  * methods (stubbing).
  *
+ * Design doc : http://go/closuremock
+ *
  */
 
 
@@ -36,7 +38,6 @@ goog.require('goog.functions');
  *
  * @param {!Object} objectOrClass An instance or a constructor of a class to be
  *     mocked.
- *
  * @return {!Object} The mocked object.
  */
 goog.labs.mock = function(objectOrClass) {
@@ -53,7 +54,6 @@ goog.labs.mock = function(objectOrClass) {
  * Mocks a given function.
  *
  * @param {!Function} func A function to be mocked.
- *
  * @return {!Function} The mocked function.
  */
 goog.labs.mockFunction = function(func) {
@@ -62,6 +62,47 @@ goog.labs.mockFunction = function(func) {
   goog.asserts.assertFunction(mockedFunction);
   return /** @type {!Function} */ (mockedFunction);
 };
+
+
+/**
+ * Spies on a given object.
+ *
+ * @param {!Object} obj The object to be spied on.
+ * @return {!Object} The spy object.
+ */
+goog.labs.mock.spy = function(obj) {
+  // Go over properties of 'obj' and create a MockSpyManager_ to
+  // be used for spying on calls to methods.
+  var mockSpyManager = new goog.labs.mock.MockSpyManager_(obj);
+  var spyObject = mockSpyManager.getMockedItem();
+  goog.asserts.assert(spyObject);
+  return spyObject;
+};
+
+
+/**
+ * Returns an object that can be used to verify calls to specific methods of a
+ * given mock.
+ *
+ * @param {!Object} obj The mocked object.
+ * @return {!Object} The verifier.
+ */
+goog.labs.mock.verify = function(obj) {
+  return obj.$callVerifier;
+};
+
+
+
+/**
+ * Error thrown when verification failed.
+ *
+ * @constructor
+ * @extends {goog.debug.Error}
+ */
+goog.labs.mock.VerificationError = function() {
+  goog.base(this, 'Verification failed!');
+};
+goog.inherits(goog.labs.mock.VerificationError, goog.debug.Error);
 
 
 /**
@@ -103,6 +144,13 @@ goog.labs.mock.MockManager_ = function() {
   this.mockedItem = {};
 
   /**
+   * A reference to the object or function being mocked.
+   * @type {Object|Function}
+   * @protected
+   */
+  this.mockee = null;
+
+  /**
    * Holds the stub bindings established so far.
    * @protected
    */
@@ -113,6 +161,13 @@ goog.labs.mock.MockManager_ = function() {
    * @protected
    */
   this.$stubBinder = null;
+
+  /**
+   * Record method calls with no stub definitions.
+   * @type {!Array.<!goog.labs.mock.MethodBinding_>}
+   * @private
+   */
+  this.callRecords_ = [];
 };
 
 
@@ -122,7 +177,6 @@ goog.labs.mock.MockManager_ = function() {
  *
  * @param {string} methodName The name of the method being bound.
  * @param {...} var_args The arguments to the method.
- *
  * @return {!goog.labs.mock.StubBinder_} The stub binder.
  * @private
  */
@@ -160,21 +214,33 @@ goog.labs.mock.MockManager_.prototype.addBinding =
 
 
 /**
- * Returns a stub, if defined, for the method and arguments passed in as
+ * Returns a stub, if defined, for the method name and arguments passed in.
+ *
+ * @param {string} methodName The name of the stubbed method.
+ * @param {!Array} args The arguments passed to the method.
+ * @return {Function} The stub function or undefined.
+ * @protected
+ */
+goog.labs.mock.MockManager_.prototype.findBinding =
+    function(methodName, args) {
+  var stub = goog.array.find(this.methodBindings, function(binding) {
+    return binding.matches(methodName, args, false /* isVerification */);
+  });
+  return stub && stub.getStub();
+};
+
+
+/**
+ * Returns a stub, if defined, for the method name and arguments passed in as
  * parameters.
  *
  * @param {string} methodName The name of the stubbed method.
- * @param {Array} args The arguments passed to the method.
- *
- * @return {!Function|undefined} The stub function or undefined.
- * @private
+ * @param {!Array} args The arguments passed to the method.
+ * @return {Function} The stub function or undefined.
+ * @protected
  */
-goog.labs.mock.MockManager_.prototype.findBinding_ =
-    function(methodName, args) {
-  var stub = goog.array.find(this.methodBindings, function(binding) {
-    return binding.matches(methodName, args);
-  });
-  return stub && stub.getStub();
+goog.labs.mock.MockManager_.prototype.getExecutor = function(methodName, args) {
+  return this.findBinding(methodName, args);
 };
 
 
@@ -184,16 +250,56 @@ goog.labs.mock.MockManager_.prototype.findBinding_ =
  *
  * @param {string} methodName The name of the method to execute.
  * @param {...} var_args The arguments passed to the method.
- *
  * @return {*} Value returned by the stub function.
- * @private
+ * @protected
  */
-goog.labs.mock.MockManager_.prototype.executeStub_ =
+goog.labs.mock.MockManager_.prototype.executeStub =
     function(methodName, var_args) {
   var args = goog.array.slice(arguments, 1);
-  var func = this.findBinding_(methodName, args);
+
+  // Record this call
+  this.recordCall_(methodName, args);
+
+  var func = this.getExecutor(methodName, args);
   if (func) {
     return func.apply(null, args);
+  }
+};
+
+
+/**
+ * Records a call to 'methodName' with arguments 'args'.
+ *
+ * @param {string} methodName The name of the called method.
+ * @param {!Array} args The array of arguments.
+ * @private
+ */
+goog.labs.mock.MockManager_.prototype.recordCall_ =
+    function(methodName, args) {
+  var callRecord = new goog.labs.mock.MethodBinding_(methodName, args,
+      goog.nullFunction);
+
+  this.callRecords_.push(callRecord);
+};
+
+
+/**
+ * Verify invocation of a method with specific arguments.
+ *
+ * @param {string} methodName The name of the method.
+ * @param {...} var_args The arguments passed.
+ * @return {!Function} The stub, if defined, or the spy method.
+ * @protected
+ */
+goog.labs.mock.MockManager_.prototype.verifyInvocation =
+    function(methodName, var_args) {
+  var args = goog.array.slice(arguments, 1);
+  var binding = goog.array.find(this.callRecords_, function(binding) {
+    return binding.matches(methodName, args, true /* isVerification */);
+  });
+
+  if (!binding) {
+    throw new goog.labs.mock.VerificationError();
   }
 };
 
@@ -221,12 +327,22 @@ goog.labs.mock.MockObjectManager_ = function(objOrClass) {
    */
   this.objectStubBinder_ = {};
 
+  this.mockee = objOrClass;
+
+  /**
+   * The call verifier is used to verify the calls. It maps property names to
+   * the method that does call verification.
+   * @type {!Object.<string, function(string, ...)>}
+   * @private
+   */
+  this.objectCallVerifier_ = {};
+
   var obj;
   if (goog.isFunction(objOrClass)) {
     // Create a temporary subclass with a no-op constructor so that we can
     // create an instance and determine what methods it has.
     /** @constructor */
-    function tempCtor() {};
+    var tempCtor = function() {};
     goog.inherits(tempCtor, objOrClass);
     obj = new tempCtor();
   } else {
@@ -249,17 +365,59 @@ goog.labs.mock.MockObjectManager_ = function(objOrClass) {
   for (var i = 0; i < enumerableProperties.length; i++) {
     var prop = enumerableProperties[i];
     if (goog.isFunction(obj[prop])) {
-      this.mockedItem[prop] = goog.bind(this.executeStub_, this, prop);
+      this.mockedItem[prop] = goog.bind(this.executeStub, this, prop);
       // The stub binder used to create bindings.
       this.objectStubBinder_[prop] =
           goog.bind(this.handleMockCall_, this, prop);
+      // The verifier verifies the calls.
+      this.objectCallVerifier_[prop] =
+          goog.bind(this.verifyInvocation, this, prop);
     }
   }
   // The alias for stub binder exposed to the world.
   this.mockedItem.$stubBinder = this.objectStubBinder_;
+
+  // The alias for verifier for the world.
+  this.mockedItem.$callVerifier = this.objectCallVerifier_;
 };
 goog.inherits(goog.labs.mock.MockObjectManager_,
               goog.labs.mock.MockManager_);
+
+
+
+/**
+ * Sets up the spying behavior for the given object.
+ *
+ * @param {!Object} obj The object to be spied on.
+ *
+ * @constructor
+ * @extends {goog.labs.mock.MockObjectManager_}
+ * @private
+ */
+goog.labs.mock.MockSpyManager_ = function(obj) {
+  goog.base(this, obj);
+};
+goog.inherits(goog.labs.mock.MockSpyManager_,
+              goog.labs.mock.MockObjectManager_);
+
+
+/**
+ * Return a stub, if defined, for the method and arguments passed in. If we lack
+ * a stub, instead look for a call record that matches the method and arguments.
+ *
+ * @return {Function} The stub or the invocation logger, if defined.
+ * @override
+ */
+goog.labs.mock.MockSpyManager_.prototype.findBinding =
+    function(methodName, args) {
+  var stub = goog.base(this, 'findBinding', methodName, args);
+
+  if (!stub) {
+    stub = goog.bind(this.mockee[methodName], this.mockee);
+  }
+
+  return stub;
+};
 
 
 
@@ -283,14 +441,15 @@ goog.labs.mock.MockFunctionManager_ = function(func) {
    * @private
    */
   this.functionStubBinder_ = goog.bind(this.handleMockCall_, this, null);
+
+  this.mockedItem = goog.bind(this.executeStub, this, null);
+  this.mockedItem.$stubBinder = this.functionStubBinder_;
+
   /**
-   * The alias for stub binder exposed to the world.
+   * The call verifier is used to verify function invocations.
    * @type {!Function}
    */
-  this.$stubBinder = this.functionStubBinder_;
-
-  this.mockedItem = goog.bind(this.executeStub_, this, null);
-  this.mockedItem.$stubBinder = this.$stubBinder;
+  this.mockedItem.$callVerifier = goog.bind(this.verifyInvocation, this, null);
 };
 goog.inherits(goog.labs.mock.MockFunctionManager_,
               goog.labs.mock.MockManager_);
@@ -364,7 +523,6 @@ goog.labs.mock.StubBinder_.prototype.thenReturn = function(value) {
  * goog.labs.mock.when(mockObj).getFoo(3).thenReturn(4);
  *
  * @param {!Object} mockObject The mocked object.
- *
  * @return {!goog.labs.mock.StubBinder_} The property binder.
  */
 goog.labs.mock.when = function(mockObject) {
@@ -421,10 +579,25 @@ goog.labs.mock.MethodBinding_.prototype.getStub = function() {
  *
  * @param {string} methodName The name of the method being stubbed.
  * @param {!Array} args An array of arguments.
+ * @param {boolean} isVerification Whether this is a function verification call
+ *     or not.
  * @return {boolean} If it matches the stored arguments.
  */
-goog.labs.mock.MethodBinding_.prototype.matches = function(methodName, args) {
-  //TODO(user): More elaborate argument matching.
+goog.labs.mock.MethodBinding_.prototype.matches = function(
+    methodName, args, isVerification) {
+  var specs = isVerification ? args : this.args_;
+  var calls = isVerification ? this.args_ : args;
+
+  //TODO(user): More elaborate argument matching. Think about matching
+  //    objects.
   return this.methodName_ == methodName &&
-         goog.array.equals(args, this.args_);
+      goog.array.equals(calls, specs, function(arg, spec) {
+        // Duck-type to see if this is an object that implements the
+        // goog.labs.testing.Matcher interface.
+        if (goog.isFunction(spec.matches)) {
+          return spec.matches(arg);
+        } else {
+          return goog.array.defaultCompareEquality(spec, arg);
+        }
+      });
 };

@@ -81,6 +81,20 @@ goog.LOCALE = 'en';  // default to en
 
 
 /**
+ * @define {boolean} Whether this code is running on trusted sites.
+ *
+ * On untrusted sites, several native functions can be defined or overridden by
+ * external libraries like Prototype, Datejs, and JQuery and setting this flag
+ * to false forces closure to use its own implementations when possible.
+ *
+ * If your javascript can be loaded by a third party site and you are wary about
+ * relying on non-standard implementations, specify
+ * "--define goog.TRUSTED_SITE=false" to the JSCompiler.
+ */
+goog.TRUSTED_SITE = true;
+
+
+/**
  * Creates object stubs for a namespace.  The presence of one or more
  * goog.provide() calls indicate that the file defines the given
  * objects/namespaces.  Build tools also scan for provide/require statements
@@ -933,8 +947,7 @@ goog.removeUid = function(obj) {
  * @type {string}
  * @private
  */
-goog.UID_PROPERTY_ = 'closure_uid_' +
-    Math.floor(Math.random() * 2147483648).toString(36);
+goog.UID_PROPERTY_ = 'closure_uid_' + ((Math.random() * 1e9) >>> 0);
 
 
 /**
@@ -1138,7 +1151,7 @@ goog.mixin = function(target, source) {
  * @return {number} An integer value representing the number of milliseconds
  *     between midnight, January 1, 1970 and the current time.
  */
-goog.now = Date.now || (function() {
+goog.now = (goog.TRUSTED_SITE && Date.now) || (function() {
   // Unary plus operator converts its operand to a number which in the case of
   // a date is done by calling getTime().
   return +new Date();
@@ -1333,7 +1346,17 @@ if (!COMPILED && goog.global.CLOSURE_CSS_NAME_MAPPING) {
 
 
 /**
- * Abstract implementation of goog.getMsg for use with localized messages.
+ * Gets a localized message.
+ *
+ * This function is a compiler primitive. If you give the compiler a localized
+ * message bundle, it will replace the string at compile-time with a localized
+ * version, and expand goog.getMsg call to a concatenated string.
+ *
+ * Messages must be initialized in the form:
+ * <code>
+ * var MSG_NAME = goog.getMsg('Hello {$placeholder}', {'placeholder': 'world'});
+ * </code>
+ *
  * @param {string} str Translatable string, places holders in the form {$foo}.
  * @param {Object=} opt_values Map of place holder name to value.
  * @return {string} message with placeholders filled.
@@ -1345,6 +1368,26 @@ goog.getMsg = function(str, opt_values) {
     str = str.replace(new RegExp('\\{\\$' + key + '\\}', 'gi'), value);
   }
   return str;
+};
+
+
+/**
+ * Gets a localized message. If the message does not have a translation, gives a
+ * fallback message.
+ *
+ * This is useful when introducing a new message that has not yet been
+ * translated into all languages.
+ *
+ * This function is a compiler primtive. Must be used in the form:
+ * <code>var x = goog.getMsgWithFallback(MSG_A, MSG_B);</code>
+ * where MSG_A and MSG_B were initialized with goog.getMsg.
+ *
+ * @param {string} a The preferred message.
+ * @param {string} b The fallback message.
+ * @return {string} The best translated message.
+ */
+goog.getMsgWithFallback = function(a, b) {
+  return a;
 };
 
 

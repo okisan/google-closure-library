@@ -128,16 +128,24 @@ goog.events.EventType = {
 
   // IE specific events.
   // See http://msdn.microsoft.com/en-us/library/ie/hh673557(v=vs.85).aspx
-  MSGESTURECHANGE: 'MsGestureChange',
-  MSGESTUREEND: 'MsGestureEnd',
-  MSGESTUREHOLD: 'MsGestureHold',
-  MSGESTURESTART: 'MsGestureStart',
-  MSGESTURETAP: 'MsGestureTap',
-  MSINERTIASTART: 'MsInertiaStart',
-  MSPOINTERCANCEL: 'MsPointerCancel',
-  MSPOINTERDOWN: 'MsPointerDown',
-  MSPOINTERMOVE: 'MsPointerDown',
-  MSPOINTEROVER: 'MsPointerOver',
-  MSPOINTEROUT: 'MsPointerOut',
-  MSPOINTERUP: 'MsPointerUp'
+  MSGESTURECHANGE: 'MSGestureChange',
+  MSGESTUREEND: 'MSGestureEnd',
+  MSGESTUREHOLD: 'MSGestureHold',
+  MSGESTURESTART: 'MSGestureStart',
+  MSGESTURETAP: 'MSGestureTap',
+  MSGOTPOINTERCAPTURE: 'MSGotPointerCapture',
+  MSINERTIASTART: 'MSInertiaStart',
+  MSLOSTPOINTERCAPTURE: 'MSLostPointerCapture',
+  MSPOINTERCANCEL: 'MSPointerCancel',
+  MSPOINTERDOWN: 'MSPointerDown',
+  MSPOINTERMOVE: 'MSPointerMove',
+  MSPOINTEROVER: 'MSPointerOver',
+  MSPOINTEROUT: 'MSPointerOut',
+  MSPOINTERUP: 'MSPointerUp',
+
+  // Native IMEs/input tools events.
+  TEXTINPUT: 'textinput',
+  COMPOSITIONSTART: 'compositionstart',
+  COMPOSITIONUPDATE: 'compositionupdate',
+  COMPOSITIONEND: 'compositionend'
 };

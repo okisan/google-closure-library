@@ -51,8 +51,8 @@ goog.storage.mechanism.IEUserData = function(storageKey, opt_storageNodeId) {
     if (!goog.storage.mechanism.IEUserData.storageMap_) {
       goog.storage.mechanism.IEUserData.storageMap_ = new goog.structs.Map();
     }
-    this.storageNode_ = /** @type {Element} */
-        (goog.storage.mechanism.IEUserData.storageMap_.get(storageKey));
+    this.storageNode_ = /** @type {Element} */ (
+        goog.storage.mechanism.IEUserData.storageMap_.get(storageKey));
     if (!this.storageNode_) {
       if (opt_storageNodeId) {
         this.storageNode_ = document.getElementById(opt_storageNodeId);

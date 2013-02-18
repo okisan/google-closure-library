@@ -53,7 +53,7 @@ goog.require('goog.net.xpc.Transport');
  * @extends {goog.net.xpc.Transport}
  */
 goog.net.xpc.NativeMessagingTransport = function(channel, peerHostname,
-                                                 opt_domHelper, opt_oneSidedHandshake, opt_protocolVersion) {
+    opt_domHelper, opt_oneSidedHandshake, opt_protocolVersion) {
   goog.base(this, opt_domHelper);
 
   /**
@@ -165,7 +165,7 @@ goog.net.xpc.NativeMessagingTransport = function(channel, peerHostname,
 
   this.eventHandler_.
       listen(this.maybeAttemptToConnectTimer_, goog.Timer.TICK,
-      this.maybeAttemptToConnect_);
+          this.maybeAttemptToConnect_);
 
   goog.net.xpc.logger.info('NativeMessagingTransport created.  ' +
       'protocolVersion=' + this.protocolVersion_ + ', oneSidedHandshake=' +
@@ -245,9 +245,9 @@ goog.net.xpc.NativeMessagingTransport.sendTimerId_ = 0;
  */
 goog.net.xpc.NativeMessagingTransport.prototype.couldPeerVersionBe_ =
     function(version) {
-      return this.peerProtocolVersion_ == null ||
-          this.peerProtocolVersion_ == version;
-    };
+  return this.peerProtocolVersion_ == null ||
+      this.peerProtocolVersion_ == version;
+};
 
 
 /**
@@ -302,7 +302,7 @@ goog.net.xpc.NativeMessagingTransport.messageReceived_ = function(msgEvt) {
   var payload = data.substring(serviceDelim + 1);
 
   goog.net.xpc.logger.fine('messageReceived: channel=' + channelName +
-      ', service=' + service + ', payload=' + payload);
+                           ', service=' + service + ', payload=' + payload);
 
   // Attempt to deliver message to the channel. Keep in mind that it may not
   // exist for several reasons, including but not limited to:
@@ -327,7 +327,7 @@ goog.net.xpc.NativeMessagingTransport.messageReceived_ = function(msgEvt) {
         !staleChannel.isConnected() &&
         service == goog.net.xpc.TRANSPORT_SERVICE_ &&
         (transportMessageType == goog.net.xpc.SETUP ||
-            transportMessageType == goog.net.xpc.SETUP_NTPV2)) {
+        transportMessageType == goog.net.xpc.SETUP_NTPV2)) {
       // Inner peer received SETUP message but channel names did not match.
       // Start using the channel name sent from outer peer. The channel name
       // of the inner peer can easily become out of date, as iframe's and their
@@ -359,46 +359,46 @@ goog.net.xpc.NativeMessagingTransport.messageReceived_ = function(msgEvt) {
  */
 goog.net.xpc.NativeMessagingTransport.prototype.transportServiceHandler =
     function(payload) {
-      var transportParts =
-          goog.net.xpc.NativeMessagingTransport.parseTransportPayload_(payload);
-      var transportMessageType = transportParts[0];
-      var peerEndpointId = transportParts[1];
-      switch (transportMessageType) {
-        case goog.net.xpc.SETUP_ACK_:
-          this.setPeerProtocolVersion_(1);
-          if (!this.setupAckReceived_.hasFired()) {
-            this.setupAckReceived_.callback(true);
-          }
-          break;
-        case goog.net.xpc.SETUP_ACK_NTPV2:
-          if (this.protocolVersion_ == 2) {
-            this.setPeerProtocolVersion_(2);
-            if (!this.setupAckReceived_.hasFired()) {
-              this.setupAckReceived_.callback(true);
-            }
-          }
-          break;
-        case goog.net.xpc.SETUP:
-          this.setPeerProtocolVersion_(1);
-          this.sendSetupAckMessage_(1);
-          break;
-        case goog.net.xpc.SETUP_NTPV2:
-          if (this.protocolVersion_ == 2) {
-            var prevPeerProtocolVersion = this.peerProtocolVersion_;
-            this.setPeerProtocolVersion_(2);
-            this.sendSetupAckMessage_(2);
-            if ((prevPeerProtocolVersion == 1 || this.peerEndpointId_ != null) &&
-                this.peerEndpointId_ != peerEndpointId) {
-              // Send a new SETUP message since the peer has been replaced.
-              goog.net.xpc.logger.info('Sending SETUP and changing peer ID to: ' +
-                  peerEndpointId);
-              this.sendSetupMessage_();
-            }
-            this.peerEndpointId_ = peerEndpointId;
-          }
-          break;
+  var transportParts =
+      goog.net.xpc.NativeMessagingTransport.parseTransportPayload_(payload);
+  var transportMessageType = transportParts[0];
+  var peerEndpointId = transportParts[1];
+  switch (transportMessageType) {
+    case goog.net.xpc.SETUP_ACK_:
+      this.setPeerProtocolVersion_(1);
+      if (!this.setupAckReceived_.hasFired()) {
+        this.setupAckReceived_.callback(true);
       }
-    };
+      break;
+    case goog.net.xpc.SETUP_ACK_NTPV2:
+      if (this.protocolVersion_ == 2) {
+        this.setPeerProtocolVersion_(2);
+        if (!this.setupAckReceived_.hasFired()) {
+          this.setupAckReceived_.callback(true);
+        }
+      }
+      break;
+    case goog.net.xpc.SETUP:
+      this.setPeerProtocolVersion_(1);
+      this.sendSetupAckMessage_(1);
+      break;
+    case goog.net.xpc.SETUP_NTPV2:
+      if (this.protocolVersion_ == 2) {
+        var prevPeerProtocolVersion = this.peerProtocolVersion_;
+        this.setPeerProtocolVersion_(2);
+        this.sendSetupAckMessage_(2);
+        if ((prevPeerProtocolVersion == 1 || this.peerEndpointId_ != null) &&
+            this.peerEndpointId_ != peerEndpointId) {
+          // Send a new SETUP message since the peer has been replaced.
+          goog.net.xpc.logger.info('Sending SETUP and changing peer ID to: ' +
+              peerEndpointId);
+          this.sendSetupMessage_();
+        }
+        this.peerEndpointId_ = peerEndpointId;
+      }
+      break;
+  }
+};
 
 
 /**
@@ -408,26 +408,26 @@ goog.net.xpc.NativeMessagingTransport.prototype.transportServiceHandler =
  */
 goog.net.xpc.NativeMessagingTransport.prototype.sendSetupMessage_ =
     function() {
-      // 'real' (legacy) v1 transports don't know about there being v2 ones out
-      // there, and we shouldn't either.
-      goog.asserts.assert(!(this.protocolVersion_ == 1 &&
-          this.peerProtocolVersion_ == 2));
+  // 'real' (legacy) v1 transports don't know about there being v2 ones out
+  // there, and we shouldn't either.
+  goog.asserts.assert(!(this.protocolVersion_ == 1 &&
+      this.peerProtocolVersion_ == 2));
 
-      if (this.protocolVersion_ == 2 && this.couldPeerVersionBe_(2)) {
-        var payload = goog.net.xpc.SETUP_NTPV2;
-        payload += goog.net.xpc.NativeMessagingTransport.MESSAGE_DELIMITER_;
-        payload += this.endpointId_;
-        this.send(goog.net.xpc.TRANSPORT_SERVICE_, payload);
-      }
+  if (this.protocolVersion_ == 2 && this.couldPeerVersionBe_(2)) {
+    var payload = goog.net.xpc.SETUP_NTPV2;
+    payload += goog.net.xpc.NativeMessagingTransport.MESSAGE_DELIMITER_;
+    payload += this.endpointId_;
+    this.send(goog.net.xpc.TRANSPORT_SERVICE_, payload);
+  }
 
-      // For backward compatibility reasons, the V1 SETUP message can be sent by
-      // both V1 and V2 transports.  Once a V2 transport has 'heard' another V2
-      // transport it starts ignoring V1 messages, so the V2 message must be sent
-      // first.
-      if (this.couldPeerVersionBe_(1)) {
-        this.send(goog.net.xpc.TRANSPORT_SERVICE_, goog.net.xpc.SETUP);
-      }
-    };
+  // For backward compatibility reasons, the V1 SETUP message can be sent by
+  // both V1 and V2 transports.  Once a V2 transport has 'heard' another V2
+  // transport it starts ignoring V1 messages, so the V2 message must be sent
+  // first.
+  if (this.couldPeerVersionBe_(1)) {
+    this.send(goog.net.xpc.TRANSPORT_SERVICE_, goog.net.xpc.SETUP);
+  }
+};
 
 
 /**
@@ -439,21 +439,21 @@ goog.net.xpc.NativeMessagingTransport.prototype.sendSetupMessage_ =
  */
 goog.net.xpc.NativeMessagingTransport.prototype.sendSetupAckMessage_ =
     function(protocolVersion) {
-      goog.asserts.assert(this.protocolVersion_ != 1 || protocolVersion != 2,
-          'Shouldn\'t try to send a v2 setup ack in v1 mode.');
-      if (this.protocolVersion_ == 2 && this.couldPeerVersionBe_(2) &&
-          protocolVersion == 2) {
-        this.send(goog.net.xpc.TRANSPORT_SERVICE_, goog.net.xpc.SETUP_ACK_NTPV2);
-      } else if (this.couldPeerVersionBe_(1) && protocolVersion == 1) {
-        this.send(goog.net.xpc.TRANSPORT_SERVICE_, goog.net.xpc.SETUP_ACK_);
-      } else {
-        return;
-      }
+  goog.asserts.assert(this.protocolVersion_ != 1 || protocolVersion != 2,
+      'Shouldn\'t try to send a v2 setup ack in v1 mode.');
+  if (this.protocolVersion_ == 2 && this.couldPeerVersionBe_(2) &&
+      protocolVersion == 2) {
+    this.send(goog.net.xpc.TRANSPORT_SERVICE_, goog.net.xpc.SETUP_ACK_NTPV2);
+  } else if (this.couldPeerVersionBe_(1) && protocolVersion == 1) {
+    this.send(goog.net.xpc.TRANSPORT_SERVICE_, goog.net.xpc.SETUP_ACK_);
+  } else {
+    return;
+  }
 
-      if (!this.setupAckSent_.hasFired()) {
-        this.setupAckSent_.callback(true);
-      }
-    };
+  if (!this.setupAckSent_.hasFired()) {
+    this.setupAckSent_.callback(true);
+  }
+};
 
 
 /**
@@ -464,16 +464,16 @@ goog.net.xpc.NativeMessagingTransport.prototype.sendSetupAckMessage_ =
  */
 goog.net.xpc.NativeMessagingTransport.prototype.setPeerProtocolVersion_ =
     function(version) {
-      if (version > this.peerProtocolVersion_) {
-        this.peerProtocolVersion_ = version;
-      }
-      if (this.peerProtocolVersion_ == 1) {
-        if (!this.setupAckSent_.hasFired() && !this.oneSidedHandshake_) {
-          this.setupAckSent_.callback(true);
-        }
-        this.peerEndpointId_ = null;
-      }
-    };
+  if (version > this.peerProtocolVersion_) {
+    this.peerProtocolVersion_ = version;
+  }
+  if (this.peerProtocolVersion_ == 1) {
+    if (!this.setupAckSent_.hasFired() && !this.oneSidedHandshake_) {
+      this.setupAckSent_.callback(true);
+    }
+    this.peerEndpointId_ = null;
+  }
+};
 
 
 /**
@@ -498,19 +498,19 @@ goog.net.xpc.NativeMessagingTransport.prototype.connect = function() {
  */
 goog.net.xpc.NativeMessagingTransport.prototype.maybeAttemptToConnect_ =
     function() {
-      // In a one-sided handshake, the outer frame does not send a SETUP message,
-      // but the inner frame does.
-      var outerFrame = this.channel_.getRole() ==
-          goog.net.xpc.CrossPageChannelRole.OUTER;
-      if ((this.oneSidedHandshake_ && outerFrame) ||
-          this.channel_.isConnected() ||
-          this.isDisposed()) {
-        this.maybeAttemptToConnectTimer_.stop();
-        return;
-      }
-      this.maybeAttemptToConnectTimer_.start();
-      this.sendSetupMessage_();
-    };
+  // In a one-sided handshake, the outer frame does not send a SETUP message,
+  // but the inner frame does.
+  var outerFrame = this.channel_.getRole() ==
+      goog.net.xpc.CrossPageChannelRole.OUTER;
+  if ((this.oneSidedHandshake_ && outerFrame) ||
+      this.channel_.isConnected() ||
+      this.isDisposed()) {
+    this.maybeAttemptToConnectTimer_.stop();
+    return;
+  }
+  this.maybeAttemptToConnectTimer_.start();
+  this.sendSetupMessage_();
+};
 
 
 /**
@@ -578,10 +578,10 @@ goog.net.xpc.NativeMessagingTransport.prototype.send = function(service,
  */
 goog.net.xpc.NativeMessagingTransport.prototype.notifyConnected_ =
     function() {
-      var delay = (this.protocolVersion_ == 1 || this.peerProtocolVersion_ == 1) ?
-          goog.net.xpc.NativeMessagingTransport.CONNECTION_DELAY_MS_ : undefined;
-      this.channel_.notifyConnected(delay);
-    };
+  var delay = (this.protocolVersion_ == 1 || this.peerProtocolVersion_ == 1) ?
+      goog.net.xpc.NativeMessagingTransport.CONNECTION_DELAY_MS_ : undefined;
+  this.channel_.notifyConnected(delay);
+};
 
 
 /** @override */
@@ -640,8 +640,8 @@ goog.net.xpc.NativeMessagingTransport.prototype.disposeInternal = function() {
  */
 goog.net.xpc.NativeMessagingTransport.parseTransportPayload_ =
     function(payload) {
-      var transportParts = (/** @type {!Array.<?string>} */ payload.split(
-          goog.net.xpc.NativeMessagingTransport.MESSAGE_DELIMITER_));
-      transportParts[1] = transportParts[1] || null;
-      return transportParts;
-    };
+  var transportParts = /** @type {!Array.<?string>} */ (payload.split(
+      goog.net.xpc.NativeMessagingTransport.MESSAGE_DELIMITER_));
+  transportParts[1] = transportParts[1] || null;
+  return transportParts;
+};
